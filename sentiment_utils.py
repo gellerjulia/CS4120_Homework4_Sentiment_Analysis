@@ -1,6 +1,5 @@
-# FIRST: RENAME THIS FILE TO sentiment_utils.py 
 
-# YOUR NAMES HERE:
+# YOUR NAMES HERE: Julie Geller, Shae Marks
 
 
 """
@@ -22,6 +21,9 @@ import matplotlib.pyplot as plt
 # so that we can indicate a function in a type hint
 from typing import Callable
 nltk.download('punkt')
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+
 
 def generate_tuples_from_file(training_file_path: str) -> list:
     """
@@ -101,9 +103,11 @@ def create_index(all_train_data_X: list) -> list:
         vocab: a list of all the unique words in the training data
     """
     # figure out what our vocab is and what words correspond to what indices
-    #TODO: implement this function
-    pass
-
+    vocab = []
+    for row in all_train_data_X:
+        [vocab.append(wrd) for wrd in row]
+    vocab = list(set(vocab))
+    return vocab
 
 def featurize(vocab: list, data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> list:
     """
@@ -117,5 +121,55 @@ def featurize(vocab: list, data_to_be_featurized_X: list, binary: bool = False, 
         a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     # using a Counter is essential to having this not take forever
-    #TODO: implement this function
-    pass
+    # initalize X matrix 
+    cnt = 0
+    if verbose:
+        print('Number of datapoints featurized')
+    X = []
+    for row in data_to_be_featurized_X:
+        x = [row.count(word) for word in vocab]
+        if binary:
+            x = [1 if c>0 else 0 for c in x]
+        # add x values to corresponding X matrix
+        X.append(x)
+        cnt += 1
+        if verbose:
+            print(cnt+'/'+len(data_to_be_featurized_X[0]))
+    return X
+
+def featurize_CV(vocab: list, data_to_be_featurized_X: list, binary: bool = False) -> list:
+    """
+    Create vectorized BoW representations of the given data using CountVectorizer.
+    Args:
+        vocab: a list of words in the vocabulary
+        data_to_be_featurized_X: a list of data to be featurized in the format [[word1, word2, ...], ...]
+        binary: whether or not to use binary features
+    Returns:
+        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+    """
+    vectorizer = CountVectorizer(vocabulary=vocab, binary=binary)
+    X = vectorizer.fit_transform(data_to_be_featurized_X)
+    # turn X into a list of lists for standard vector representation
+    X = X.toarray().tolist()
+    return X
+
+def get_featurized(type: str, vocab: list, data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> list:
+    """
+    Create vectorized BoW representations of the given data using own vectorization function or CountVectorizer.
+    Args:
+        type: str(either 'own' or 'CV')
+        vocab: a list of words in the vocabulary
+        data_to_be_featurized_X: a list of data to be featurized in the format [[word1, word2, ...], ...]
+        binary: whether or not to use binary features
+        verbose: boolean for whether or not to print out progress
+    Returns:
+        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+    """
+    if type == 'own':
+        X = featurize(vocab, data_to_be_featurized_X, binary, verbose)
+    elif type == 'CV':
+        X = featurize_CV(vocab, data_to_be_featurized_X, binary) 
+    else:
+        raise Exception('Invalid featurizatino type provided. Must be either "own" or "CV".')
+    return X
+  
