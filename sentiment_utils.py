@@ -137,6 +137,7 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
     plt.plot(percent_train_data, y2, label = "recall") 
     plt.plot(percent_train_data, y3, label = "f1 score") 
     plt.plot(percent_train_data, y4, label = "accuracy") 
+
     plt.title(kind+' Model Performance Analysis')
     plt.xlabel('Percent of Training Data Used')
     plt.ylabel('Metric score')
