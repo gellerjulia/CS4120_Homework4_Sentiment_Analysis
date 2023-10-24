@@ -25,6 +25,7 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+from nltk.classify import NaiveBayesClassifier
 import math
 import statistics as stats
 
@@ -165,6 +166,25 @@ def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verb
     return get_prfa(y_dev,  preds, verbose=verbose)
 
 
+def naive_bayes_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
+    """
+    Generates performance metrics for a Naive Bayes model trained on the given training data
+     and tested on the given dev data.
+    Args:
+        X_train: list of list of int (featurized training data)
+        y_train: list of int (training data labels)
+        X_dev: list of list of int (featurized training data)
+        y_dev: list of int (dev data labels)
+        verbose: bool (if model metrics should be printed)
+    Returns:
+        tuple of precision, recall, f1, and accuracy
+    """
+    ## TODO fix up!! 
+    model = NaiveBayesClassifier.train(X_train, y_train)
+    preds = model.classify(X_dev)
+    return get_prfa(y_dev,  preds, verbose=verbose)
+
+
 def create_index(all_train_data_X: list) -> list:
     """
     Given the training data, create a list of all the words in the training data.
@@ -196,7 +216,7 @@ def featurize_own(vocab: list, data_to_be_featurized_X: list, binary: bool = Fal
     # initialize count of datapoints already featurized 
     count = 0
     total_datapoints = len(data_to_be_featurized_X[0])
-    
+
     if verbose:
         print('Number of datapoints featurized')
     # initialize X matrix 
@@ -297,3 +317,4 @@ def create_log_reg(X_train: list, y_train: list) -> list:
     model = LogisticRegression()
     model.fit(X_train, y_train)
     return model
+
