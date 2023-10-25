@@ -87,11 +87,11 @@ def get_prfa(dev_y: list, preds: list, verbose=False) -> tuple:
     f1 = f1_score(dev_y, preds)
     accuracy = accuracy_score(dev_y, preds)
     if verbose:
-        print(precision, recall, f1, accuracy)
+        print("Precision:", precision, " Recall:", recall, " f1:", f1, " Accuracy:", accuracy)
     return (precision, recall, f1, accuracy)
 
 
-def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: list, kind: str, savepath: str = None, verbose: bool = False, num_epochs=None) -> None:
+def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: list, kind: str, savepath: str = None, verbose: bool = False, num_epochs=None, neural_net_verbose: bool = True) -> None:
     """
     Create a graph of the classifier's performance on the dev set as a function of the amount of training data.
     Args:
@@ -102,6 +102,7 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
         savepath: the path to save the graph to (if None, the graph will not be saved)
         verbose: whether to print the metrics
         num_epochs: int (number of epochs to sue if model is a neural network)
+        neural_net_verbose: whether or not to print epoch progress and accuracy when training a neural network
     """
     # save training and dev features and labels
     X_train = [tup[0] for tup in train_feats]
@@ -125,12 +126,12 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
     # get metrics for each percent split and save to corresponding graph y list
     for x_split_train, y_split_train in zip(X_train_splits, y_train_splits):
         if verbose:
-            print(percent_train_data[i], 'of training data used')
+            print("\n", percent_train_data[i], 'of training data used')
         # get model metrics
         if num_epochs is None:
             metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, verbose=verbose)
         else:
-            metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, num_epochs, verbose=verbose)
+            metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, num_epochs, verbose=verbose, neural_net_verbose=neural_net_verbose)
 
         # save y's to appropriate graph y list
         y1.append(metrics[0]) 
@@ -153,8 +154,10 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
     plt.ylabel('Metric score')
     plt.legend() 
     plt.xticks(x_axis_percents)
+
     if savepath is not None:
-        plt.savefig(savepath+'.png')
+        plt.savefig(savepath)
+        
     plt.show()
 
 
@@ -176,7 +179,7 @@ def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verb
     return get_prfa(y_dev,  preds, verbose=verbose)
 
 
-def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, num_epochs: int, verbose: bool=False):
+def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, num_epochs: int, verbose: bool=False, neural_net_verbose: bool=True):
     """
     Generates performance metrics for a Neural Network model trained on the given training data
      and tested on the given dev data. Neural Network uses 1 hidden layer with 100 hidden units.
@@ -188,6 +191,7 @@ def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, n
         y_dev: list of int (dev data labels)
         input_dim: int (number of dimensions in input)
         verbose: bool (if model metrics should be printed)
+        neural_net_verbose: bool (if epoch training progress should be printed)
     Returns:
         tuple of precision, recall, f1, and accuracy
     """
@@ -214,10 +218,10 @@ def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, n
                 metrics=['accuracy'])
     
     # train model 
-    model.fit(X_train, y_train, epochs=num_epochs, verbose=1)
+    model.fit(X_train, y_train, epochs=num_epochs, verbose=neural_net_verbose)
 
     # get model predictions
-    preds = model.predict(X_dev)
+    preds = model.predict(X_dev, verbose=neural_net_verbose)
     # make classification decision based on 0.5 as threshold
     preds = [1 if y >= 0.5 else 0 for y in preds]
     return get_prfa(y_dev, preds, verbose=verbose)
