@@ -227,10 +227,10 @@ def naive_bayes_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, 
     Returns:
         tuple of precision, recall, f1, and accuracy
     """
-    ## TODO fix up!! 
-    model = NaiveBayesClassifier.train(X_train, y_train)
+    train_data = [(x, y) for x,y in zip(X_train, y_train)]
+    model = NaiveBayesClassifier.train(train_data)
     preds = [model.classify(sample) for sample in X_dev]
-    return get_prfa(y_dev,  preds, verbose=verbose)
+    return get_prfa(y_dev, preds, verbose=verbose)
 
 
 def create_index(all_train_data_X: list) -> list:
@@ -292,7 +292,7 @@ def featurize_own(vocab: list, data_to_be_featurized_X: list, binary: bool = Fal
     return X
 
 
-def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> list:
+def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> tuple:
     """
     Create vectorized BoW representations of the given data using CountVectorizer.
     Args:
@@ -301,7 +301,7 @@ def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_
         binary: whether or not to use binary features
         verbose: whether or not to print out learned vocab size
     Returns:
-        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+        a tuple where each element is a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     vectorizer = CountVectorizer(binary=binary)
     vectorizer = vectorizer.fit(train_data_to_be_featurized_X)
@@ -317,7 +317,7 @@ def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_
     return X_train, X_dev
 
 
-def featurize(type: str, train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, vocab: list = [], binary: bool = False, verbose: bool = False) -> list:
+def featurize(type: str, train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, vocab: list = [], binary: bool = False, verbose: bool = False) -> tuple:
     """
     Create vectorized BoW representations of the given data using own vectorization function or CountVectorizer.
     Args:
@@ -327,7 +327,7 @@ def featurize(type: str, train_data_to_be_featurized_X: list, dev_data_to_be_fea
         binary: whether or not to use binary features
         verbose: boolean for whether or not to print out additional information
     Returns:
-        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+        a tuple where each element is a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     if type == 'own':
         X_train = featurize_own(vocab, train_data_to_be_featurized_X, binary, verbose)
@@ -337,6 +337,63 @@ def featurize(type: str, train_data_to_be_featurized_X: list, dev_data_to_be_fea
     else:
         raise Exception('Invalid featurization type provided. Must be either "own" or "CV".')
     return X_train, X_dev
+
+def naive_bayes_featurize(data_to_be_featurized_X: list, vocab: list, binary: bool = False, verbose: bool = False) -> list:
+    """
+    Create BoW representations for a list of samples to be used by NLTK's NaiveBayesClassifier.
+    Args:
+        data_to_be_featurized_X: list of of lists, where each inner list is the words from a tokenized data sample 
+        vocab: a list of words in the vocabulary
+        binary: whether or not to use binary features
+        verbose: whether or not to print additional information about the data being processed 
+    Returns:
+        a list of dictionaries (one for each sample) representing the words present in both the vocab and the sample
+        - for binary representations, in the format {word1: True, word2: True, ...}
+        - for multinomial representations, in the format {word1: count1, word2: count2, ...}
+    """ 
+    featurized_data = []    
+    for i in range(len(data_to_be_featurized_X)):
+        featurized_sample = naive_bayes_word_feats(data_to_be_featurized_X[i], vocab, binary=binary, verbose=verbose)
+        featurized_data.append(featurized_sample)
+
+    return featurized_data
+
+
+def naive_bayes_word_feats(doc_words: list, vocab: list, binary: bool = False, verbose: bool = False) -> dict:   
+    """
+    Create BoW representations of the given data to be used by NLTK's NaiveBayesClassifier.
+    Args:
+        doc_words: list of words from a tokenized data sample 
+        vocab: a list of words in the vocabulary
+        binary: whether or not to use binary features
+        verbose: whether or not to print additional information about the data being processed 
+    Returns:
+        a dictionary representing the words present in both the vocab and doc_words 
+        - for binary representations, in the format {word1: True, word2: True, ...}
+        - for multinomial representations, in the format {word1: count1, word2: count2, ...}
+    """ 
+    # STUDENTS IMPLEMENT
+    doc_counter = Counter(doc_words)
+
+    # for efficiency, only iterate through words that we know are both in the vocab and in doc_words 
+    overlap = set.intersection(set(doc_counter.keys()), set(vocab))
+
+    # initialize empty dictionary of features 
+    bow_feats = {}
+    for word in overlap:
+        if binary:
+            bow_feats[word] = True
+        else:
+            bow_feats[word] = doc_counter[word]
+
+    if verbose:
+        print("Size of doc_words data:", len(doc_words))
+        print("Size of vocab:", len(vocab))
+        print("Size of overlap between doc_words and vocab:", len(overlap))
+        print("Feature examples:", list(bow_feats.items())[:3])
+        print()
+           
+    return bow_feats 
 
 
 def percent_zeros_help(vect):
