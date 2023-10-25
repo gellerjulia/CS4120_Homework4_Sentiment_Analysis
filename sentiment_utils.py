@@ -116,7 +116,7 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
     y4 = [] # accuracy
 
     # create percent split of training data to use
-    percent_train_data = [i for i in np.arange(0.1, 1.1, 0.1)]
+    percent_train_data = [i for i in np.arange(0.1, 1.1, 0.1)] # [0.1, 0.2, ..., 1.0]
     # split training data into above percent splits
     X_train_splits = [X_train[0:math.ceil(len(X_train)*percent)] for percent in percent_train_data]
     y_train_splits = [y_train[0:math.ceil(len(X_train)*percent)] for percent in percent_train_data]
@@ -141,15 +141,18 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
         i+=1
     
     # plot graph
-    plt.plot(percent_train_data, y1, label = "precision") 
-    plt.plot(percent_train_data, y2, label = "recall") 
-    plt.plot(percent_train_data, y3, label = "f1 score") 
-    plt.plot(percent_train_data, y4, label = "accuracy") 
-
+    # format x-axis in percent form: [10%, 20%, ... 100%]
+    x_axis_percents = [str(int(percent*100)) + "%" for percent in percent_train_data]
+    plt.plot(x_axis_percents, y1, label = "precision") 
+    plt.plot(x_axis_percents, y2, label = "recall") 
+    plt.plot(x_axis_percents, y3, label = "f1 score") 
+    plt.plot(x_axis_percents, y4, label = "accuracy") 
+    
     plt.title(kind+' Model Performance Analysis')
     plt.xlabel('Percent of Training Data Used')
     plt.ylabel('Metric score')
     plt.legend() 
+    plt.xticks(x_axis_percents)
     plt.show()
     if savepath is not None:
         plt.savefig(savepath+'.png')
@@ -157,11 +160,11 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
 
 def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
     """
-    Generates performance metrics for a Logistic Regression model trained onthe given training data
+    Generates performance metrics for a Logistic Regression model trained on the given training data
      and tested on the given dev data.
     Args:
         X_train: list of list of int (featurized training data)
-        y_train: list of int (trianing data labels)
+        y_train: list of int (training data labels)
         y_dev: list of int (dev data labels)
         verbose: bool (if model metrics should be printed)
     Returns:
@@ -176,12 +179,14 @@ def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verb
 def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
     """
     Generates performance metrics for a Neural Network model trained on the given training data
-     and tested on the given dev data.
+     and tested on the given dev data. Neural Network uses 1 hidden layer with 100 hidden units.
     Args:
         num_epochs: int (number of training epochs)
         X_train: list of list of int (featurized training data)
-        y_train: list of int (trianing data labels)
+        y_train: list of int (training data labels)
+        X_dev: list of list of int (featurized dev data)
         y_dev: list of int (dev data labels)
+        input_dim: int (number of dimensions in input)
         verbose: bool (if model metrics should be printed)
     Returns:
         tuple of precision, recall, f1, and accuracy
@@ -207,8 +212,8 @@ def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: lis
     model.fit(X_train, y_train, epochs=num_epochs, verbose=1)
 
     # get model predictions
-    preds = preds = model.predict(X_dev)
-    # make classsification decision based on 0.5 as threshold
+    preds = model.predict(X_dev)
+    # make classification decision based on 0.5 as threshold
     preds = [1 if y >= 0.5 else 0 for y in preds]
     return get_prfa(y_dev, preds, verbose=verbose)
     
@@ -220,16 +225,16 @@ def naive_bayes_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, 
     Args:
         X_train: list of list of int (featurized training data)
         y_train: list of int (training data labels)
-        X_dev: list of list of int (featurized training data)
+        X_dev: list of list of int (featurized dev data)
         y_dev: list of int (dev data labels)
         verbose: bool (if model metrics should be printed)
     Returns:
         tuple of precision, recall, f1, and accuracy
     """
-    ## TODO fix up!! 
-    model = NaiveBayesClassifier.train(X_train, y_train)
-    preds = model.classify(X_dev)
-    return get_prfa(y_dev,  preds, verbose=verbose)
+    train_data = [(x, y) for x,y in zip(X_train, y_train)]
+    model = NaiveBayesClassifier.train(train_data)
+    preds = [model.classify(sample) for sample in X_dev]
+    return get_prfa(y_dev, preds, verbose=verbose)
 
 
 def create_index(all_train_data_X: list) -> list:
@@ -260,12 +265,14 @@ def featurize_own(vocab: list, data_to_be_featurized_X: list, binary: bool = Fal
         a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     # using a Counter is essential to having this not take forever
+
     # initialize count of datapoints already featurized 
     count = 0
     total_datapoints = len(data_to_be_featurized_X[0])
 
     if verbose:
         print('Number of datapoints featurized')
+
     # initialize X matrix 
     X = []
     # featurize each datapoint 
@@ -273,29 +280,32 @@ def featurize_own(vocab: list, data_to_be_featurized_X: list, binary: bool = Fal
         # get the count of each word in the vocab in the current review 
         rev_counter = Counter(review)
         x = [rev_counter[word] for word in vocab]
+
         if binary:
             # transform counts above 0 to be 1 if doing binary featurization
             x = [1 if c>0 else 0 for c in x]
+
         # add x vector matrix X 
         X.append(x)
-        # increase count of datapoints featurized already
+        # increment count of datapoints featurized already
         count += 1
-        # print progress is verbose is required
+        # print progress if verbose 
         if verbose:
             print(count, '/', total_datapoints)
+
     return X
 
 
-def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, binary: bool = False) -> list:
+def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> tuple:
     """
     Create vectorized BoW representations of the given data using CountVectorizer.
     Args:
-        vocab: a list of words in the vocabulary
         train_data_to_be_featurized_X: a list of training data to be featurized in the format [[word1, word2, ...], ...]
         dev_data_to_be_featurized_X: a list of dev data to be featurized in the format [[word1, word2, ...], ...]
         binary: whether or not to use binary features
+        verbose: whether or not to print out learned vocab size
     Returns:
-        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+        a tuple where each element is a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     vectorizer = CountVectorizer(binary=binary)
     vectorizer = vectorizer.fit(train_data_to_be_featurized_X)
@@ -304,10 +314,14 @@ def featurize_CV(train_data_to_be_featurized_X: list, dev_data_to_be_featurized_
     # turn X's into a list of lists for standard vector representation
     X_train = X_train.toarray().tolist()
     X_dev = X_dev.toarray().tolist()
+    
+    if verbose:
+        print("Vocab size:", len(vectorizer.vocabulary_))
+
     return X_train, X_dev
 
 
-def featurize(type: str, vocab: list, train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, binary: bool = False, verbose: bool = False) -> list:
+def featurize(type: str, train_data_to_be_featurized_X: list, dev_data_to_be_featurized_X: list, vocab: list = [], binary: bool = False, verbose: bool = False) -> tuple:
     """
     Create vectorized BoW representations of the given data using own vectorization function or CountVectorizer.
     Args:
@@ -315,18 +329,75 @@ def featurize(type: str, vocab: list, train_data_to_be_featurized_X: list, dev_d
         vocab: a list of words in the vocabulary
         data_to_be_featurized_X: a list of data to be featurized in the format [[word1, word2, ...], ...]
         binary: whether or not to use binary features
-        verbose: boolean for whether or not to print out progress
+        verbose: boolean for whether or not to print out additional information
     Returns:
-        a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
+        a tuple where each element is a list of sparse vector representations of the data in the format [[count1, count2, ...], ...]
     """
     if type == 'own':
         X_train = featurize_own(vocab, train_data_to_be_featurized_X, binary, verbose)
         X_dev = featurize_own(vocab, dev_data_to_be_featurized_X, binary, verbose)
     elif type == 'CV':
-        X_train, X_dev = featurize_CV(train_data_to_be_featurized_X, dev_data_to_be_featurized_X, binary) 
+        X_train, X_dev = featurize_CV(train_data_to_be_featurized_X, dev_data_to_be_featurized_X, binary, verbose) 
     else:
         raise Exception('Invalid featurization type provided. Must be either "own" or "CV".')
     return X_train, X_dev
+
+def naive_bayes_featurize(data_to_be_featurized_X: list, vocab: list, binary: bool = False, verbose: bool = False) -> list:
+    """
+    Create BoW representations for a list of samples to be used by NLTK's NaiveBayesClassifier.
+    Args:
+        data_to_be_featurized_X: list of of lists, where each inner list is the words from a tokenized data sample 
+        vocab: a list of words in the vocabulary
+        binary: whether or not to use binary features
+        verbose: whether or not to print additional information about the data being processed 
+    Returns:
+        a list of dictionaries (one for each sample) representing the words present in both the vocab and the sample
+        - for binary representations, in the format {word1: True, word2: True, ...}
+        - for multinomial representations, in the format {word1: count1, word2: count2, ...}
+    """ 
+    featurized_data = []    
+    for i in range(len(data_to_be_featurized_X)):
+        featurized_sample = naive_bayes_word_feats(data_to_be_featurized_X[i], vocab, binary=binary, verbose=verbose)
+        featurized_data.append(featurized_sample)
+
+    return featurized_data
+
+
+def naive_bayes_word_feats(doc_words: list, vocab: list, binary: bool = False, verbose: bool = False) -> dict:   
+    """
+    Create BoW representations of the given data to be used by NLTK's NaiveBayesClassifier.
+    Args:
+        doc_words: list of words from a tokenized data sample 
+        vocab: a list of words in the vocabulary
+        binary: whether or not to use binary features
+        verbose: whether or not to print additional information about the data being processed 
+    Returns:
+        a dictionary representing the words present in both the vocab and doc_words 
+        - for binary representations, in the format {word1: True, word2: True, ...}
+        - for multinomial representations, in the format {word1: count1, word2: count2, ...}
+    """ 
+    # STUDENTS IMPLEMENT
+    doc_counter = Counter(doc_words)
+
+    # for efficiency, only iterate through words that we know are both in the vocab and in doc_words 
+    overlap = set.intersection(set(doc_counter.keys()), set(vocab))
+
+    # initialize empty dictionary of features 
+    bow_feats = {}
+    for word in overlap:
+        if binary:
+            bow_feats[word] = True
+        else:
+            bow_feats[word] = doc_counter[word]
+
+    if verbose:
+        print("Size of doc_words data:", len(doc_words))
+        print("Size of vocab:", len(vocab))
+        print("Size of overlap between doc_words and vocab:", len(overlap))
+        print("Feature examples:", list(bow_feats.items())[:3])
+        print()
+           
+    return bow_feats 
 
 
 def percent_zeros_help(vect):
@@ -354,19 +425,17 @@ def percent_zeros(X):
     return stats.mean(pcts)
 
 
-def create_log_reg(X_train: list, y_train: list) -> list:
+def create_log_reg(X_train: list, y_train: list) -> LogisticRegression:
     """
     Creates a logistic regression model based on the given training data.
     Args:
         X_train: str(either 'own' or 'CV')
         y_train: a list of words in the vocabulary
-        data_to_be_featurized_X: a list of data to be featurized in the format [[word1, word2, ...], ...]
-        binary: whether or not to use binary features
-        verbose: boolean for whether or not to print out progress
     Returns:
-        model
+        LogisticRegression model
   """
-    model = LogisticRegression()
+    
+    model = LogisticRegression(max_iter=500) # increasing maximum number of iterations to allow model to converge
     model.fit(X_train, y_train)
     return model
 
