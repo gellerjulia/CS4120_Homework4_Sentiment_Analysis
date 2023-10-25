@@ -153,9 +153,9 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
     plt.ylabel('Metric score')
     plt.legend() 
     plt.xticks(x_axis_percents)
-    plt.show()
     if savepath is not None:
         plt.savefig(savepath+'.png')
+    plt.show()
 
 
 def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
