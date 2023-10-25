@@ -191,6 +191,12 @@ def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: lis
     Returns:
         tuple of precision, recall, f1, and accuracy
     """
+    # make sure all lists are numpy arrays
+    X_train = np.array(X_train)
+    y_train = np.array(y_train)
+    X_dev = np.array(X_dev)
+
+
     # define model parameters
     hidden_units = 100
     input_dim = len(X_train[0])
