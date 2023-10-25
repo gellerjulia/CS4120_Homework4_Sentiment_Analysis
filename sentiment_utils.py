@@ -130,7 +130,7 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
         if num_epochs is None:
             metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, verbose=verbose)
         else:
-            metrics = metrics_fun(num_epochs, x_split_train, y_split_train, X_dev, y_dev, verbose=verbose)
+            metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, num_epochs, verbose=verbose)
 
         # save y's to appropriate graph y list
         y1.append(metrics[0]) 
@@ -176,7 +176,7 @@ def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verb
     return get_prfa(y_dev,  preds, verbose=verbose)
 
 
-def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
+def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, num_epochs: int, verbose: bool=False):
     """
     Generates performance metrics for a Neural Network model trained on the given training data
      and tested on the given dev data. Neural Network uses 1 hidden layer with 100 hidden units.
@@ -191,12 +191,17 @@ def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: lis
     Returns:
         tuple of precision, recall, f1, and accuracy
     """
+    # make sure all lists are numpy arrays
+    X_train = np.array(X_train)
+    y_train = np.array(y_train)
+    X_dev = np.array(X_dev)
+
     # define model parameters
     hidden_units = 100
-    input_dim = len(X_train[0])
+    input_dim = X_train.shape[1]
+
     # instantiate model
     model = Sequential()
-
 
     # hidden layer 
     model.add(Dense(units=hidden_units, activation='relu', input_dim=input_dim))
