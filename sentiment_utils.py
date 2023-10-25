@@ -130,7 +130,7 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
         if num_epochs is None:
             metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, verbose=verbose)
         else:
-            metrics = metrics_fun(x_split_train, y_split_train, X_dev, y_dev, verbose=verbose, num_epochs=num_epochs)
+            metrics = metrics_fun(num_epochs, x_split_train, y_split_train, X_dev, y_dev, verbose=verbose)
 
         # save y's to appropriate graph y list
         y1.append(metrics[0]) 
@@ -176,7 +176,7 @@ def log_reg_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, verb
     return get_prfa(y_dev,  preds, verbose=verbose)
 
 
-def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: list, y_dev: list, input_dim: int, verbose: bool=False):
+def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: list, y_dev: list, verbose: bool=False):
     """
     Generates performance metrics for a Neural Network model trained on the given training data
      and tested on the given dev data. Neural Network uses 1 hidden layer with 100 hidden units.
@@ -187,12 +187,16 @@ def neural_net_metrics(num_epochs: int, X_train: list, y_train: list, X_dev: lis
         X_dev: list of list of int (featurized dev data)
         y_dev: list of int (dev data labels)
         input_dim: int (number of dimensions in input)
-        verbose: bool (whether or not to print metrics)
+        verbose: bool (if model metrics should be printed)
+    Returns:
+        tuple of precision, recall, f1, and accuracy
     """
     # define model parameters
     hidden_units = 100
+    input_dim = len(X_train[0])
     # instantiate model
     model = Sequential()
+
 
     # hidden layer 
     model.add(Dense(units=hidden_units, activation='relu', input_dim=input_dim))
