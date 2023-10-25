@@ -27,6 +27,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 from nltk.classify import NaiveBayesClassifier
 import math
+import random
 import statistics as stats
 from keras.models import Sequential
 from keras.layers import Dense
@@ -101,9 +102,12 @@ def create_training_graph(metrics_fun: Callable, train_feats: list, dev_feats: l
         kind: the kind of model being used (will go in the title)
         savepath: the path to save the graph to (if None, the graph will not be saved)
         verbose: whether to print the metrics
-        num_epochs: int (number of epochs to sue if model is a neural network)
+        num_epochs: int (number of epochs to use if model is a neural network)
         neural_net_verbose: whether or not to print epoch progress and accuracy when training a neural network
     """
+    # shuffle the training data order - helps test model consistency when running multiple times 
+    random.shuffle(train_feats)
+
     # save training and dev features and labels
     X_train = [tup[0] for tup in train_feats]
     y_train = [tup[1] for tup in train_feats]
@@ -209,6 +213,7 @@ def neural_net_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, n
 
     # hidden layer 
     model.add(Dense(units=hidden_units, activation='relu', input_dim=input_dim))
+
     # output layer
     model.add(Dense(units=1, activation='sigmoid'))
 
@@ -232,9 +237,9 @@ def naive_bayes_metrics(X_train: list, y_train: list, X_dev: list, y_dev: list, 
     Generates performance metrics for a Naive Bayes model trained on the given training data
      and tested on the given dev data.
     Args:
-        X_train: list of list of int (featurized training data)
+        X_train: list of dictionaries (Bag of Words featurized training data)
         y_train: list of int (training data labels)
-        X_dev: list of list of int (featurized dev data)
+        X_dev: list of list of dictionaries (Bag of Words featurized dev data)
         y_dev: list of int (dev data labels)
         verbose: bool (if model metrics should be printed)
     Returns:
@@ -355,7 +360,7 @@ def naive_bayes_featurize(data_to_be_featurized_X: list, vocab: list, binary: bo
     """
     Create BoW representations for a list of samples to be used by NLTK's NaiveBayesClassifier.
     Args:
-        data_to_be_featurized_X: list of of lists, where each inner list is the words from a tokenized data sample 
+        data_to_be_featurized_X: list of of lists, where each inner list is the words from a tokenized data sample [[word1, word2, ...], ...]
         vocab: a list of words in the vocabulary
         binary: whether or not to use binary features
         verbose: whether or not to print additional information about the data being processed 
@@ -376,7 +381,7 @@ def naive_bayes_word_feats(doc_words: list, vocab: list, binary: bool = False, v
     """
     Create BoW representations of the given data to be used by NLTK's NaiveBayesClassifier.
     Args:
-        doc_words: list of words from a tokenized data sample 
+        doc_words: list of words from a tokenized data sample [word1, word2, ...]
         vocab: a list of words in the vocabulary
         binary: whether or not to use binary features
         verbose: whether or not to print additional information about the data being processed 
